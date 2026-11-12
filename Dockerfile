@@ -1,8 +1,10 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
+# Dépendances d'abord : couche mise en cache tant que pom.xml ne change pas.
 COPY pom.xml .
+RUN mvn -q -B dependency:go-offline
 COPY src src
-RUN --mount=type=cache,target=/root/.m2 mvn -q -DskipTests package
+RUN mvn -q -B -DskipTests package
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
