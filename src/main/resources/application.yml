@@ -1,0 +1,75 @@
+spring:
+  application:
+    name: budget-api
+  profiles:
+    default: dev
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+  servlet:
+    multipart:
+      max-file-size: 15MB
+      max-request-size: 16MB
+
+server:
+  # Railway injecte PORT.
+  port: ${PORT:8080}
+
+app:
+  jwt:
+    # Clé HMAC (>= 32 caractères). À surcharger en production via APP_JWT_SECRET.
+    secret: ${APP_JWT_SECRET:change-me-kit-budgetaire-secret-key-2026-daaradji}
+    expiration-minutes: ${APP_JWT_EXPIRATION_MINUTES:1440}
+  cors:
+    allowed-origins: ${APP_CORS_ORIGINS:http://localhost:[*],http://127.0.0.1:[*],http://192.168.*:[*],http://10.*:[*],http://172.*:[*]}
+  demo-data: ${APP_DEMO_DATA:true}
+  ai:
+    # Modèle utilisé pour lire les copies manuscrites (clé : variable d'environnement ANTHROPIC_API_KEY).
+    model: ${APP_AI_MODEL:claude-opus-5-5}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:h2:file:./data/kit-budgetaire-mysql;MODE=MySQL;DATABASE_TO_LOWER=TRUE;NON_KEYWORDS=PERIOD,VALUE
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  # MySQL. Sur Railway, les variables MYSQLHOST/MYSQLPORT/... du service MySQL sont lues directement
+  # (à référencer dans le service API) ; DB_URL/DB_USERNAME/DB_PASSWORD restent prioritaires.
+  datasource:
+    url: ${DB_URL:jdbc:mysql://${MYSQLHOST:localhost}:${MYSQLPORT:3306}/${MYSQLDATABASE:kit_budgetaire}?allowPublicKeyRetrieval=true&useSSL=false&characterEncoding=UTF-8&connectionTimeZone=UTC}
+    username: ${DB_USERNAME:${MYSQLUSER:budget}}
+    password: ${DB_PASSWORD:${MYSQLPASSWORD:budget}}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
