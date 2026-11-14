@@ -68,6 +68,12 @@
 			<artifactId>anthropic-java</artifactId>
 			<version>3.2.0</version>
 		</dependency>
+		<!-- Export des dépenses en PDF -->
+		<dependency>
+			<groupId>com.github.librepdf</groupId>
+			<artifactId>openpdf</artifactId>
+			<version>2.4.0</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>

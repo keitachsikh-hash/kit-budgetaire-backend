@@ -28,6 +28,7 @@ import com.daaradji.budget.category.CategoryType;
 import com.daaradji.budget.goal.SavingGoal;
 import com.daaradji.budget.goal.SavingGoalRepository;
 import com.daaradji.budget.transaction.BudgetTransaction;
+import com.daaradji.budget.transaction.MobileOperator;
 import com.daaradji.budget.transaction.TransactionRepository;
 import com.daaradji.budget.user.User;
 import com.daaradji.budget.user.UserRepository;
@@ -96,6 +97,10 @@ public class DemoDataLoader implements ApplicationRunner {
                     ym.atDay(Math.min(8, lastDay)), "Senelec + SEN'EAU");
             tx(uid, om, cat.get("Communication"), CategoryType.EXPENSE, 10000, ym.atDay(Math.min(5, lastDay)),
                     "Pass internet");
+            tx(uid, cash, cat.get("Crédit"), CategoryType.EXPENSE, 2000, ym.atDay(Math.min(3, lastDay)),
+                    "Recharge téléphone", MobileOperator.ORANGE);
+            tx(uid, wave, cat.get("Crédit"), CategoryType.EXPENSE, 1000, ym.atDay(Math.min(16, lastDay)),
+                    "Recharge", rnd.nextBoolean() ? MobileOperator.YAS : MobileOperator.EXPRESSO);
             tx(uid, bank, cat.get("Tontine"), CategoryType.EXPENSE, 25000, ym.atDay(Math.min(10, lastDay)),
                     "Tontine du quartier");
             for (int d = 2; d <= lastDay; d += 3) {
@@ -111,7 +116,7 @@ public class DemoDataLoader implements ApplicationRunner {
                         ym.atDay(18), "Vêtements");
             }
             if (rnd.nextInt(3) == 0) {
-                tx(uid, cash, cat.get("Cérémonies & Dons"), CategoryType.EXPENSE, 10000 + rnd.nextInt(3) * 5000,
+                tx(uid, cash, cat.get("Cérémonies"), CategoryType.EXPENSE, 10000 + rnd.nextInt(3) * 5000,
                         ym.atDay(Math.min(12, lastDay)), "Baptême");
             }
             if (rnd.nextInt(3) == 0) {
@@ -147,6 +152,11 @@ public class DemoDataLoader implements ApplicationRunner {
 
     private void tx(Long uid, Account account, Category category, CategoryType type, int amount, LocalDate date,
             String description) {
+        tx(uid, account, category, type, amount, date, description, null);
+    }
+
+    private void tx(Long uid, Account account, Category category, CategoryType type, int amount, LocalDate date,
+            String description, MobileOperator operator) {
         BudgetTransaction t = new BudgetTransaction();
         t.setUserId(uid);
         t.setAccount(account);
@@ -155,6 +165,7 @@ public class DemoDataLoader implements ApplicationRunner {
         t.setAmount(BigDecimal.valueOf(amount));
         t.setDate(date);
         t.setDescription(description);
+        t.setOperator(operator);
         transactions.save(t);
     }
 

@@ -58,6 +58,10 @@ public class BudgetTransaction {
 
     private String description;
 
+    /** Opérateur d'une recharge de crédit (null pour les autres opérations). */
+    @Enumerated(EnumType.STRING)
+    private MobileOperator operator;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }

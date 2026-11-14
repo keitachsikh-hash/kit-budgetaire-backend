@@ -124,11 +124,15 @@ public class TransactionService {
         if (req.date().isAfter(LocalDate.now().plusYears(1))) {
             throw new BusinessException("La date est trop éloignée dans le futur");
         }
+        if (req.operator() != null && req.type() != CategoryType.EXPENSE) {
+            throw new BusinessException("L'opérateur ne concerne que les dépenses de crédit");
+        }
         t.setType(req.type());
         t.setAmount(req.amount());
         t.setDate(req.date());
         t.setAccount(account);
         t.setCategory(category);
+        t.setOperator(req.operator());
         t.setDescription(req.description() == null || req.description().isBlank() ? null : req.description().trim());
     }
 

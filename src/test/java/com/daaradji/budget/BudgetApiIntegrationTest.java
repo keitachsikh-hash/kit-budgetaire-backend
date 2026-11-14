@@ -95,6 +95,34 @@ class BudgetApiIntegrationTest {
     }
 
     @Test
+    void creditEtRelevePdf() throws Exception {
+        String token = extract(post("/api/auth/register",
+                "{\"fullName\":\"Khady Fall\",\"email\":\"khady@test.sn\",\"password\":\"secret12\"}", null).body(),
+                "\"token\":\"([^\"]+)\"");
+        String cats = get("/api/categories?type=EXPENSE", token).body();
+        assertThat(cats).contains("\"name\":\"Cérémonies\"").contains("\"name\":\"Dons\"")
+                .contains("\"name\":\"Crédit\"").doesNotContain("Cérémonies & Dons");
+        String creditId = extract(cats, "\"id\":(\\d+),\"name\":\"Crédit\"");
+        String accountId = extract(get("/api/accounts", token).body(), "\"id\":(\\d+)");
+        String today = LocalDate.now().toString();
+
+        HttpResponse<String> credit = post("/api/transactions", """
+                {"type":"EXPENSE","amount":2000,"date":"%s","accountId":%s,"categoryId":%s,"operator":"YAS"}
+                """.formatted(today, accountId, creditId), token);
+        assertThat(credit.statusCode()).isEqualTo(201);
+        assertThat(credit.body()).contains("\"operator\":\"YAS\"");
+
+        for (String period : new String[] { "WEEK", "MONTH", "YEAR" }) {
+            HttpResponse<byte[]> pdf = http.send(HttpRequest.newBuilder(URI.create(
+                    url("/api/transactions/expenses/pdf?period=" + period + "&date=" + today)))
+                    .header("Authorization", "Bearer " + token).GET().build(), HttpResponse.BodyHandlers.ofByteArray());
+            assertThat(pdf.statusCode()).isEqualTo(200);
+            assertThat(pdf.headers().firstValue("Content-Type")).hasValueSatisfying(v -> assertThat(v).contains("pdf"));
+            assertThat(new String(pdf.body(), 0, 5)).isEqualTo("%PDF-");
+        }
+    }
+
+    @Test
     void copiesManuscrites() throws Exception {
         String token = extract(post("/api/auth/register",
                 "{\"fullName\":\"Awa Ndiaye\",\"email\":\"awa@test.sn\",\"password\":\"secret12\"}", null).body(),

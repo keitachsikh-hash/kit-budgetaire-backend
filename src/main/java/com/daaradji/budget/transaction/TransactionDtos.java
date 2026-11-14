@@ -28,7 +28,8 @@ public final class TransactionDtos {
             @NotNull(message = "La date est obligatoire") LocalDate date,
             @NotNull(message = "Le compte est obligatoire") Long accountId,
             @NotNull(message = "La catégorie est obligatoire") Long categoryId,
-            @Size(max = 255) String description) {
+            @Size(max = 255) String description,
+            MobileOperator operator) {
     }
 
     /** Saisie multiple : plusieurs dépenses et/ou revenus enregistrés en une seule fois. */
@@ -49,10 +50,11 @@ public final class TransactionDtos {
     }
 
     public record TransactionResponse(Long id, CategoryType type, BigDecimal amount, LocalDate date,
-            String description, AccountRef account, CategoryRef category) {
+            String description, MobileOperator operator, AccountRef account, CategoryRef category) {
 
         public static TransactionResponse of(BudgetTransaction t) {
             return new TransactionResponse(t.getId(), t.getType(), t.getAmount(), t.getDate(), t.getDescription(),
+                    t.getOperator(),
                     new AccountRef(t.getAccount().getId(), t.getAccount().getName(), t.getAccount().getType().name(),
                             t.getAccount().getColor()),
                     new CategoryRef(t.getCategory().getId(), t.getCategory().getName(), t.getCategory().getIcon(),

@@ -36,10 +36,12 @@ import jakarta.validation.Valid;
 public class TransactionController {
 
     private final TransactionService service;
+    private final ExpenseReportService reports;
     private final CurrentUser currentUser;
 
-    public TransactionController(TransactionService service, CurrentUser currentUser) {
+    public TransactionController(TransactionService service, ExpenseReportService reports, CurrentUser currentUser) {
         this.service = service;
+        this.reports = reports;
         this.currentUser = currentUser;
     }
 
@@ -78,11 +80,12 @@ public class TransactionController {
             @RequestParam(required = false) String q) {
         List<TransactionResponse> rows = service.export(currentUser.id(),
                 new TransactionFilter(from, to, type, accountId, categoryId, q));
-        StringBuilder csv = new StringBuilder("﻿Date;Type;Catégorie;Compte;Montant;Description\n");
+        StringBuilder csv = new StringBuilder("﻿Date;Type;Catégorie;Opérateur;Compte;Montant;Description\n");
         for (TransactionResponse t : rows) {
             csv.append(t.date()).append(';')
                     .append(t.type() == CategoryType.INCOME ? "Revenu" : "Dépense").append(';')
                     .append(escape(t.category().name())).append(';')
+                    .append(t.operator() == null ? "" : t.operator().label()).append(';')
                     .append(escape(t.account().name())).append(';')
                     .append(t.amount().toPlainString()).append(';')
                     .append(escape(t.description())).append('\n');
@@ -91,6 +94,18 @@ public class TransactionController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"operations.csv\"")
                 .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
                 .body(csv.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Relevé PDF des dépenses de la semaine, du mois ou de l'année contenant {@code date}. */
+    @GetMapping(value = "/expenses/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> expensesPdf(
+            @RequestParam(defaultValue = "MONTH") ExpenseReportService.ReportPeriod period,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        ExpenseReportService.Report report = reports.expenses(currentUser.id(), period, date);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + report.fileName() + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(report.content());
     }
 
     @GetMapping("/{id}")
