@@ -85,6 +85,7 @@ public class CategoryService {
                 new Category(userId, "Shopping", EXPENSE, "bag", "#e35d6a"),
                 new Category(userId, "Achats", EXPENSE, "cart", "#fd7e14"),
                 new Category(userId, "Homones", EXPENSE, "droplet", "#d63384"),
+                new Category(userId, "Dépenses inutiles", EXPENSE, "exclamation-triangle", "#dc3545"),
                 new Category(userId, "Autres dépenses", EXPENSE, "three-dots", "#6c757d"),
                 new Category(userId, "Salaire", INCOME, "briefcase", "#198754"),
                 new Category(userId, "Business", INCOME, "shop", "#0d6efd"),
