@@ -54,6 +54,7 @@ public class ExpenseReportService {
     private static final Color ACCENT = new Color(0x0d, 0x6e, 0xfd);
     private static final Color HEADER_BG = new Color(0xe9, 0xf1, 0xff);
     private static final Color ZEBRA = new Color(0xf8, 0xf9, 0xfa);
+    private static final Color GROUP_BG = new Color(0xf1, 0xf5, 0xfb);
 
     private final TransactionService transactions;
 
@@ -132,7 +133,7 @@ public class ExpenseReportService {
                     doc.add(breakdown(sortDesc(byOperator), byOperator.values().stream()
                             .reduce(BigDecimal.ZERO, BigDecimal::add), head, cell, bold));
                 }
-                doc.add(heading("Détail des opérations", section));
+                doc.add(heading("Détail des opérations par nature", section));
                 doc.add(detail(rows, total, head, cell, bold));
             }
 
@@ -177,24 +178,56 @@ public class ExpenseReportService {
         return table;
     }
 
+    /**
+     * Détail regroupé par nature (catégorie) : un bandeau par catégorie, ses opérations dans l'ordre
+     * chronologique, puis un sous-total. Les catégories suivent l'ordre de la répartition (plus gros total d'abord).
+     */
     private static PdfPTable detail(List<TransactionResponse> rows, BigDecimal total, Font head, Font cell,
             Font bold) {
-        PdfPTable table = new PdfPTable(new float[] { 2.2f, 3.2f, 2.2f, 2.6f, 4.8f, 2.8f });
+        Map<String, List<TransactionResponse>> groups = new LinkedHashMap<>();
+        Map<String, BigDecimal> totals = new LinkedHashMap<>();
+        for (TransactionResponse t : rows) {
+            totals.merge(t.category().name(), t.amount(), BigDecimal::add);
+        }
+        sortDesc(totals).keySet().forEach(name -> groups.put(name, new java.util.ArrayList<>()));
+        for (TransactionResponse t : rows) {
+            groups.get(t.category().name()).add(t);
+        }
+
+        Font groupFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9.5f, ACCENT);
+        Font subFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Color.DARK_GRAY);
+        PdfPTable table = new PdfPTable(new float[] { 2.2f, 2.2f, 2.8f, 5.6f, 2.8f });
         table.setWidthPercentage(100);
         table.setHeaderRows(1);
-        addHead(table, head, "Date", "Catégorie", "Opérateur", "Compte", "Description", "Montant");
-        int i = 0;
-        for (TransactionResponse t : rows) {
-            Color bg = i++ % 2 == 1 ? ZEBRA : null;
-            table.addCell(cell(t.date().format(DAY), cell, Element.ALIGN_LEFT, bg));
-            table.addCell(cell(t.category().name(), cell, Element.ALIGN_LEFT, bg));
-            table.addCell(cell(t.operator() == null ? "" : t.operator().label(), cell, Element.ALIGN_LEFT, bg));
-            table.addCell(cell(t.account().name(), cell, Element.ALIGN_LEFT, bg));
-            table.addCell(cell(t.description() == null ? "" : t.description(), cell, Element.ALIGN_LEFT, bg));
-            table.addCell(cell(money(t.amount()), cell, Element.ALIGN_RIGHT, bg));
+        addHead(table, head, "Date", "Opérateur", "Compte", "Description", "Montant");
+        for (Map.Entry<String, List<TransactionResponse>> g : groups.entrySet()) {
+            List<TransactionResponse> items = g.getValue();
+            items.sort(java.util.Comparator.comparing(TransactionResponse::date)
+                    .thenComparing(TransactionResponse::id));
+
+            PdfPCell band = cell(g.getKey() + "  (" + items.size() + " opération" + (items.size() > 1 ? "s" : "")
+                    + ")", groupFont, Element.ALIGN_LEFT, GROUP_BG);
+            band.setColspan(5);
+            band.setPaddingTop(6);
+            table.addCell(band);
+
+            int i = 0;
+            for (TransactionResponse t : items) {
+                Color bg = i++ % 2 == 1 ? ZEBRA : null;
+                table.addCell(cell(t.date().format(DAY), cell, Element.ALIGN_LEFT, bg));
+                table.addCell(cell(t.operator() == null ? "" : t.operator().label(), cell, Element.ALIGN_LEFT, bg));
+                table.addCell(cell(t.account().name(), cell, Element.ALIGN_LEFT, bg));
+                table.addCell(cell(t.description() == null ? "" : t.description(), cell, Element.ALIGN_LEFT, bg));
+                table.addCell(cell(money(t.amount()), cell, Element.ALIGN_RIGHT, bg));
+            }
+
+            PdfPCell subLabel = cell("Sous-total " + g.getKey(), subFont, Element.ALIGN_RIGHT, null);
+            subLabel.setColspan(4);
+            table.addCell(subLabel);
+            table.addCell(cell(money(totals.get(g.getKey())), subFont, Element.ALIGN_RIGHT, null));
         }
-        PdfPCell label = cell("Total", bold, Element.ALIGN_LEFT, HEADER_BG);
-        label.setColspan(5);
+        PdfPCell label = cell("Total général", bold, Element.ALIGN_LEFT, HEADER_BG);
+        label.setColspan(4);
         table.addCell(label);
         table.addCell(cell(money(total), bold, Element.ALIGN_RIGHT, HEADER_BG));
         return table;
